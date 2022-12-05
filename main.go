@@ -30,16 +30,73 @@ func main() {
 		os.Exit(1)
 	}
 
-	if len(os.Args) < 2 {
+	if len(flag.Args()) < 1 {
 		fmt.Println("Please specify a search term")
 		os.Exit(2)
 	}
-	search := strings.Join(os.Args[1:], " ")
+	search := strings.Join(flag.Args(), " ")
 
 	fmt.Printf(
 		"Going to search discussions in '%s/%s' for '%s'\n",
 		repo.Owner(), repo.Name(), search)
 
-	// TODO talk to API
-	// TODO print results
+	client, err := gh.GQLClient(nil)
+	if err != nil {
+		fmt.Printf("could not create a graphql client: %s", err.Error())
+		os.Exit(3)
+	}
+
+	query := fmt.Sprintf(`{
+			repository(owner: "%s", name: "%s") {
+				hasDiscussionsEnabled
+				discussions(first: 100) {
+					edges { node {
+						title
+						body
+						url
+      }}}}}`, repo.Owner(), repo.Name())
+
+	type Discussion struct {
+		Title string
+		URL   string `json:"url"`
+		Body  string
+	}
+
+	response := struct {
+		Repository struct {
+			Discussions struct {
+				Edges []struct {
+					Node Discussion
+				}
+			}
+			HasDiscussionsEnabled bool
+		}
+	}{}
+
+	err = client.Do(query, nil, &response)
+	if err != nil {
+		fmt.Printf("failed to talk to the GitHub API: %s", err.Error())
+		os.Exit(4)
+	}
+
+	if !response.Repository.HasDiscussionsEnabled {
+		fmt.Printf("%s/%s does not have discussions enabled.\n", repo.Owner(), repo.Name())
+		os.Exit(5)
+	}
+
+	matches := []Discussion{}
+
+	for _, edge := range response.Repository.Discussions.Edges {
+		if strings.Contains(edge.Node.Body+edge.Node.Title, search) {
+			matches = append(matches, edge.Node)
+		}
+	}
+
+	if len(matches) == 0 {
+		fmt.Println("No matching discussion threads found :(")
+	}
+
+	for _, d := range matches {
+		fmt.Printf("%s %s\n", d.Title, d.URL)
+	}
 }
