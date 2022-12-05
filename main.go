@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -8,12 +10,16 @@ import (
 
 	"github.com/cli/go-gh"
 	"github.com/cli/go-gh/pkg/browser"
+	"github.com/cli/go-gh/pkg/jq"
+	"github.com/cli/go-gh/pkg/jsonpretty"
 	"github.com/cli/go-gh/pkg/repository"
 	"github.com/cli/go-gh/pkg/tableprinter"
 	"github.com/cli/go-gh/pkg/term"
 )
 
 func main() {
+	jsonFlag := flag.Bool("json", false, "Output JSON")
+	jqFlag := flag.String("jq", "", "Process JSON output with a jq expression")
 	lucky := flag.Bool("lucky", false, "Open the first matching result in a web browser")
 	repoOverride := flag.String(
 		"repo", "",
@@ -103,6 +109,30 @@ func main() {
 	}
 
 	isTerminal := term.IsTerminal(os.Stdout)
+
+	if *jsonFlag {
+		output, err := json.Marshal(matches)
+		if err != nil {
+			fmt.Printf("could not serialize JSON: %s", err.Error())
+			os.Exit(7)
+		}
+		if *jqFlag != "" {
+			err = jq.Evaluate(bytes.NewBuffer(output), os.Stdout, *jqFlag)
+			if err != nil {
+				fmt.Printf("failed to execute jq: %s", err.Error())
+				os.Exit(8)
+			}
+			return
+		}
+		err = jsonpretty.Format(os.Stdout, bytes.NewBuffer(output), " ", isTerminal)
+		if err != nil {
+			fmt.Printf("could not format JSON: %s", err.Error())
+			os.Exit(9)
+		}
+
+		return
+	}
+
 	tp := tableprinter.New(os.Stdout, isTerminal, 100)
 
 	if isTerminal {

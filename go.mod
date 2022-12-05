@@ -10,6 +10,8 @@ require (
 	github.com/cli/shurcooL-graphql v0.0.2 // indirect
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/henvic/httpretty v0.0.6 // indirect
+	github.com/itchyny/gojq v0.12.8 // indirect
+	github.com/itchyny/timefmt-go v0.1.3 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-isatty v0.0.16 // indirect
