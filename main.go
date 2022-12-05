@@ -8,6 +8,8 @@ import (
 
 	"github.com/cli/go-gh"
 	"github.com/cli/go-gh/pkg/repository"
+	"github.com/cli/go-gh/pkg/tableprinter"
+	"github.com/cli/go-gh/pkg/term"
 )
 
 func main() {
@@ -35,10 +37,6 @@ func main() {
 		os.Exit(2)
 	}
 	search := strings.Join(flag.Args(), " ")
-
-	fmt.Printf(
-		"Going to search discussions in '%s/%s' for '%s'\n",
-		repo.Owner(), repo.Name(), search)
 
 	client, err := gh.GQLClient(nil)
 	if err != nil {
@@ -96,7 +94,25 @@ func main() {
 		fmt.Println("No matching discussion threads found :(")
 	}
 
+	isTerminal := term.IsTerminal(os.Stdout)
+	tp := tableprinter.New(os.Stdout, isTerminal, 100)
+
+	if isTerminal {
+		fmt.Printf(
+			"Searching discussions in '%s/%s' for '%s'\n",
+			repo.Owner(), repo.Name(), search)
+	}
+
+	fmt.Println()
 	for _, d := range matches {
-		fmt.Printf("%s %s\n", d.Title, d.URL)
+		tp.AddField(d.Title)
+		tp.AddField(d.URL)
+		tp.EndRow()
+	}
+
+	err = tp.Render()
+	if err != nil {
+		fmt.Printf("could not render data: %s", err.Error())
+		os.Exit(6)
 	}
 }
