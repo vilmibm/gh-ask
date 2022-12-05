@@ -7,12 +7,14 @@ import (
 	"strings"
 
 	"github.com/cli/go-gh"
+	"github.com/cli/go-gh/pkg/browser"
 	"github.com/cli/go-gh/pkg/repository"
 	"github.com/cli/go-gh/pkg/tableprinter"
 	"github.com/cli/go-gh/pkg/term"
 )
 
 func main() {
+	lucky := flag.Bool("lucky", false, "Open the first matching result in a web browser")
 	repoOverride := flag.String(
 		"repo", "",
 		"Specify a repository. If omitted, uses current repository")
@@ -92,6 +94,12 @@ func main() {
 
 	if len(matches) == 0 {
 		fmt.Println("No matching discussion threads found :(")
+	}
+
+	if *lucky {
+		b := browser.New("", os.Stdout, os.Stderr)
+		b.Browse(matches[0].URL)
+		return
 	}
 
 	isTerminal := term.IsTerminal(os.Stdout)
